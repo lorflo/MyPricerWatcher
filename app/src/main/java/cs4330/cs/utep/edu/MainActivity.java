@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.preference.PreferenceManager;
@@ -44,8 +45,28 @@ public class MainActivity extends ListActivity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+        db = new MyDBHandler(this);
+        Cursor cursor = db.getAllItemData();
 
-        list = new ArrayList<String>(itemStorage.keySet());
+        if(cursor.getCount() == 0)
+        {
+            toast("No data found");
+        }
+        else
+        {
+            while(cursor.moveToNext())
+            {
+                Item restore = new Item();
+                restore.setName(cursor.getString(1));
+                restore.setPrice(cursor.getDouble(2));
+                restore.setUrl(cursor.getString(3));
+                String label = restore.getName() + " $"
+                        +String.format("%.2f",restore.getPrice());
+                itemStorage.put(label,restore);
+            }
+            list = new ArrayList<String>(itemStorage.keySet());
+        }
+
         adapter = new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,list);
         setListAdapter(adapter);
         Button add = new Button(this);
@@ -54,7 +75,7 @@ public class MainActivity extends ListActivity
         add.setOnClickListener(view -> addItemDialog());
         getListView().setOnCreateContextMenuListener(this);
 
-        db = new MyDBHandler(this);
+
     }
 
 
@@ -203,21 +224,21 @@ public class MainActivity extends ListActivity
             String label = newI.getName() + " $" +String.format("%.2f",newI.getPrice());
             itemStorage.put(label,newI);
             list.add(label);
-            boolean insert = db.addItemData(item.getName(),item.getPrice(),item.getUrl());
+           boolean insert =  db.addItemData(item.getName(),item.getPrice(),item.getUrl());
             if(insert)
-                Toast.makeText(this, "data saved", Toast.LENGTH_SHORT).show();
+              toast( "data saved");
             else
-                Toast.makeText(this, "data not saved", Toast.LENGTH_SHORT).show();
+                toast( "data not saved");
+
             adapter.notifyDataSetChanged();
         });
         builder.setNegativeButton("cancel", (dialog,id) -> dialog.cancel());
         builder.create();
         builder.show();
     }
-    public void onPause()
+    private void toast(String msg)
     {
-        super.onPause();
-
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
 
     }
 

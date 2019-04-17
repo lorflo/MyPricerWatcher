@@ -33,8 +33,8 @@ public class MyDBHandler extends SQLiteOpenHelper
     @Override
     public void onCreate(SQLiteDatabase db) {
         String CREATE_TABLE = "CREATE TABLE " + TABLE_NAME + "("
-        + COL0_ID + "Integer PRIMARY KEY AUTOINCREMENT," + COL1_NAME + "TEXT,"
-        + COL2_PRICE + "Double," + COL3_URL + "TEXT" + ")";
+        + COL0_ID + " Integer PRIMARY KEY AUTOINCREMENT," + COL1_NAME + " TEXT,"
+        + COL2_PRICE + " Double," + COL3_URL + " TEXT" + ")";
         db.execSQL(CREATE_TABLE);
     }
     @Override
@@ -64,42 +64,30 @@ public class MyDBHandler extends SQLiteOpenHelper
             db.close(); // Closing database connection
             return true;
         }
+
     }
 
-    // Getting one item
-    public Item getItem(String itName) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.query(TABLE_NAME, new String[] { COL3_URL }, COL3_URL + "=?",
-                new String[] { itName }, null, null, null, null);
-        if (cursor != null)
-            cursor.moveToFirst();
-        Item item = new Item(cursor.getString(2));
-// return Item
-        return item;
-    }
-
-    // Getting All Items
-    public List<Item> getAllItemData() {
+     //Getting All Items
+    public Cursor getAllItemData() {
         SQLiteDatabase db = this.getWritableDatabase();
         // Select All Query
         String selectQuery = "SELECT * FROM " + TABLE_NAME;
         Cursor cursor = db.rawQuery(selectQuery, null);
-        List<Item> itemList = new ArrayList<Item>();
-
-
-// looping through all rows and adding to list
-        if (cursor.moveToFirst()) {
-            do {
-
-                Item item = new Item();
-                item.setPrice(Double.parseDouble(cursor.getString(0)));
-                item.setName(cursor.getString(1));
-                item.setUrl(cursor.getString(2));
-// Adding contact to list
-                itemList.add(item);
-            } while (cursor.moveToNext());
-        }
-// return contact list
-        return itemList;
+        return cursor;
     }
+
+    public boolean updateData(int id, String name, Double price, String url)
+    {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COL0_ID, id); // Items id
+        values.put(COL1_NAME, name); // Items Name
+        values.put(COL2_PRICE, price); // Items Price
+        values.put(COL3_URL, url); // Items URL
+
+        db.update(TABLE_NAME,values,COL0_ID +" = ?",new String[] {String.valueOf(id)});
+        return true;
+
+    }
+
 }

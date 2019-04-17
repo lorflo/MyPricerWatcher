@@ -33,7 +33,7 @@ public class MyDBHandler extends SQLiteOpenHelper
     @Override
     public void onCreate(SQLiteDatabase db) {
         String CREATE_TABLE = "CREATE TABLE " + TABLE_NAME + "("
-        + COL0_ID + " Integer PRIMARY KEY AUTOINCREMENT," + COL1_NAME + " TEXT,"
+        + COL0_ID + " Integer PRIMARY KEY," + COL1_NAME + " TEXT,"
         + COL2_PRICE + " Double," + COL3_URL + " TEXT" + ")";
         db.execSQL(CREATE_TABLE);
     }
@@ -46,9 +46,10 @@ public class MyDBHandler extends SQLiteOpenHelper
     }
 
     // Adding new item into table
-    public boolean addItemData(String name, Double price, String url) {
+    public boolean addItemData(int id,String name, Double price, String url) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
+        values.put(COL0_ID, id);//Items Id
         values.put(COL1_NAME, name); // Items Name
         values.put(COL2_PRICE, price); // Items Price
         values.put(COL3_URL, url); // Items URL
@@ -85,9 +86,17 @@ public class MyDBHandler extends SQLiteOpenHelper
         values.put(COL2_PRICE, price); // Items Price
         values.put(COL3_URL, url); // Items URL
 
-        db.update(TABLE_NAME,values,COL0_ID +" = ?",new String[] {String.valueOf(id)});
+        db.update(TABLE_NAME,values,COL0_ID +" = ?",
+                new String[] {String.valueOf(id)});
+        db.close(); // Closing database connection
         return true;
 
+    }
+    public Integer deleteData(int id)
+    {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+       return db.delete(TABLE_NAME,COL0_ID +" = ?",new String[] {String.valueOf(id)});
     }
 
 }

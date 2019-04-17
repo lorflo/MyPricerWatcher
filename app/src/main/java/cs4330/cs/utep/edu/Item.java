@@ -8,7 +8,8 @@ import android.os.Parcelable;
  */
 public class Item implements Parcelable
 {
-    String name;
+    private  int id = 0;
+    private String name;
     private double price = 0;
     private double percentChange = 0;
     private String url;
@@ -29,6 +30,16 @@ public class Item implements Parcelable
     {
         readFromParcel(in);
     }
+
+    public int getId()
+    {
+        return id;
+    }
+    public void setId(int id)
+    {
+        this.id = id;
+    }
+
     public Double getPrice()
     {
         return price;

@@ -6,10 +6,11 @@ import android.net.NetworkInfo;
 
 public class NetworkManager
 {
-    public void NetworkManager()
+    public void NetworkManager()//empty constructor
     {
 
     }
+    //checks wifi status
     public static boolean isWifiAvailable (Context context)
     {
         boolean onOff = false;

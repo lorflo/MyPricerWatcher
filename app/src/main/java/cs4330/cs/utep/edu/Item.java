@@ -9,28 +9,25 @@ import android.os.Parcelable;
 public class Item implements Parcelable
 {
     private  int id = 0;
-    private String name;
-    private double price = 0;
+    private String name ="";
+    private double initPrice = 0;
+    private double newPrice = 0;
     private double percentChange = 0;
     private String url;
-    PriceFinder finder;
+    private PriceFinder finder = new PriceFinder();
 
     public Item()//basic constructor
     {
-        new Item("no url given");
+        new Item("nothing entered");
     }
     public Item(String url)//constructor to generate a new item based on the url
     {
         finder = new PriceFinder(url);
-        name = finder.getItemName();
-        price = finder.getInitPrice();
-        this.url = "http://" + url;
+        initPrice = finder.getInitPrice();
+        newPrice = initPrice;
+        this.url = url;
     }
-    public Item(Parcel in)
-    {
-        readFromParcel(in);
-    }
-
+    //getters and setters for item values
     public int getId()
     {
         return id;
@@ -42,21 +39,19 @@ public class Item implements Parcelable
 
     public Double getPrice()
     {
-        return price;
+        return initPrice;
     }
     public void setPrice(Double price)
     {
-        this.price = price;
+        initPrice = price;
     }
 
-    public String getName()//gets the item name from PriceFinder class
-    {
-        return name;
-    }
+    public String getName() { return name; }
     public void setName(String name)
     {
         this.name = name;
     }
+
     public String getUrl()
     {
         return url;
@@ -65,23 +60,27 @@ public class Item implements Parcelable
     {
         this.url = url;
     }
-    public double getPercent()//gets the price from PriceFinder class
+
+    public Double getPercent()
     {
         return percentChange;
     }
-    public Double getNewPrice()
+    public void setPercent(Double percentChange){this.percentChange = percentChange;}
+
+    public Double getNewPrice() { return newPrice; }
+    public void setNewPrice(Double newPrice){this.newPrice = newPrice;}
+
+    public void updatePrice()//gets updated price and percentage change from PriceFinder class
     {
-        return price;
+        PriceFinder newFinder = new PriceFinder(getUrl());
+        newPrice = newFinder.findPrice();
+        percentChange = newFinder.percentChange(newPrice);
     }
-    public Double updatePrice()//gets updated price and percentage change from PriceFinder class
+
+    //==============================================parsable methods to pass item through intent===================================
+    public Item(Parcel in)
     {
-        price = finder.findPrice();
-        return price;
-    }
-    public Double percentChange()//gets updated price and percentage change from PriceFinder class
-    {
-        percentChange = finder.percentChange(price);
-        return percentChange;
+        readFromParcel(in);
     }
     @Override
     public int describeContents() {
@@ -90,12 +89,13 @@ public class Item implements Parcelable
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-       // dest.writeParcelable(finder, flags);
         // We just need to write each field into the
         // parcel. When we read from parcel, they
         // will come back in the same order
+        dest.writeInt(id);
         dest.writeString(name);
-        dest.writeDouble(price);
+        dest.writeDouble(initPrice);
+        dest.writeDouble(newPrice);
         dest.writeDouble(percentChange);
         dest.writeString(url);
     }
@@ -107,8 +107,10 @@ public class Item implements Parcelable
         // We just need to read back each
         // field in the order that it was
         // written to the parcel
+        id = in.readInt();
         name = in.readString();
-        price = in.readDouble();
+        initPrice = in.readDouble();
+        newPrice = in.readDouble();
         percentChange = in.readDouble();
         url = in.readString();
     }

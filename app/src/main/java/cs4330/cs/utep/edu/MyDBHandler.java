@@ -6,9 +6,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class MyDBHandler extends SQLiteOpenHelper
 {
 
@@ -21,8 +18,10 @@ public class MyDBHandler extends SQLiteOpenHelper
     // Items Table Columns names
     private static final String COL0_ID = "Id";
     private static final String COL1_NAME = "Name";
-    private static final String COL2_PRICE = "Price";
-    private static final String COL3_URL = "URL";
+    private static final String COL2_IPRICE = "InitialPrice";
+    private static final String COL3_NPRICE = "NewPrice";
+    private static final String COL4_PERCENT = "PercentDiff";
+    private static final String COL5_URL = "URL";
 
 
     public MyDBHandler(Context context)
@@ -32,9 +31,12 @@ public class MyDBHandler extends SQLiteOpenHelper
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        String CREATE_TABLE = "CREATE TABLE " + TABLE_NAME + "("
-        + COL0_ID + " Integer PRIMARY KEY," + COL1_NAME + " TEXT,"
-        + COL2_PRICE + " Double," + COL3_URL + " TEXT" + ")";
+        String CREATE_TABLE = "CREATE TABLE " + TABLE_NAME + "(" + COL0_ID + " Integer PRIMARY KEY,"
+                + COL1_NAME + " TEXT,"
+                + COL2_IPRICE + " Double,"
+                + COL3_NPRICE + " DOUBLE,"
+                + COL4_PERCENT + " DOUBLE,"
+                + COL5_URL + " TEXT" + ")";
         db.execSQL(CREATE_TABLE);
     }
     @Override
@@ -46,13 +48,15 @@ public class MyDBHandler extends SQLiteOpenHelper
     }
 
     // Adding new item into table
-    public boolean addItemData(int id,String name, Double price, String url) {
+    public boolean addItemData(int id,String name, Double iPrice,Double nPrice,Double percent, String url) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COL0_ID, id);//Items Id
         values.put(COL1_NAME, name); // Items Name
-        values.put(COL2_PRICE, price); // Items Price
-        values.put(COL3_URL, url); // Items URL
+        values.put(COL2_IPRICE, iPrice); // Items initial Price
+        values.put(COL3_NPRICE, nPrice); // Items  new Price
+        values.put(COL4_PERCENT, percent); // Items Percent change
+        values.put(COL5_URL, url); // Items URL
 // Inserting Row
         long result = db.insert(TABLE_NAME, null, values);
         if(result == -1)
@@ -77,14 +81,16 @@ public class MyDBHandler extends SQLiteOpenHelper
         return cursor;
     }
 
-    public boolean updateData(int id, String name, Double price, String url)
+    public boolean updateData(int id, String name, Double iPrice,Double nPrice,Double percent, String url)
     {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COL0_ID, id); // Items id
         values.put(COL1_NAME, name); // Items Name
-        values.put(COL2_PRICE, price); // Items Price
-        values.put(COL3_URL, url); // Items URL
+        values.put(COL2_IPRICE, iPrice); // Items initial Price
+        values.put(COL3_NPRICE, nPrice); // Items  new Price
+        values.put(COL4_PERCENT, percent); // Items Percent change
+        values.put(COL5_URL, url); // Items URL
 
         db.update(TABLE_NAME,values,COL0_ID +" = ?",
                 new String[] {String.valueOf(id)});

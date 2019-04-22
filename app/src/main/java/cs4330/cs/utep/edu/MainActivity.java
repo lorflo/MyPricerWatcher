@@ -3,13 +3,9 @@ package cs4330.cs.utep.edu;
 import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.os.Parcelable;
-import android.preference.PreferenceManager;
 import android.provider.Settings;
-import android.util.Log;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -20,27 +16,22 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
-
-import java.util.HashMap;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-
 import android.widget.TextView;
 import android.widget.Toast;
-import com.google.gson.Gson;
 
 public class MainActivity extends ListActivity
 {
-
-    //private String url = "https://www.discountmugs.com/product/fd10-translucent-color-flying-discs/";
     private Item item = new Item();
     private int selectedItem,itemId;
-    private String itemName;
+    private String itemName,label;
     private  ArrayList<Item> itemStorage = new ArrayList<>();
-   private  ArrayList<String> list;
+    private  ArrayList<String> list;
     private static  ArrayAdapter<String> adapter;
-    MyDBHandler db;
+    private MyDBHandler db;
+    private String action = "";
+    private String type = "";
+    private Intent shared;
 
 
     @Override
@@ -48,7 +39,13 @@ public class MainActivity extends ListActivity
     {
         super.onCreate(savedInstanceState);
 
-        NetworkManager wifi = new NetworkManager();
+        shared = getIntent();
+        if(Intent.ACTION_SEND.equals(shared.getAction()))//if url has been shared
+        {
+            addItemDialog();
+        }
+
+            NetworkManager wifi = new NetworkManager();
         if(!wifi.isWifiAvailable(this))
             askForWifi();
 
@@ -57,7 +54,7 @@ public class MainActivity extends ListActivity
         if(itemStorage != null)
             list = makeList(itemStorage);
 
-        adapter = new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,list);
+        adapter = new ArrayAdapter<>(this,android.R.layout.simple_list_item_1,list);
         setListAdapter(adapter);
         Button add = new Button(this);
         add.setText("add item");
@@ -66,15 +63,17 @@ public class MainActivity extends ListActivity
         getListView().setOnCreateContextMenuListener(this);
     }
 
-
+     // passes item to second activity
     public void onListItemClick(ListView parent, View v, int position, long id)
     {
        item = itemStorage.get(position);
+       selectedItem = position;
         Intent i = new Intent(this, ItemContent.class);
         i.putExtra("cs4330.cs.utep.edu",  item);
         startActivityForResult(i,1);
-        Toast.makeText(this,  item.getId() +": Item Clicked", Toast.LENGTH_SHORT).show();
+        toast("Item Clicked");
     }
+    //gets new item values from update
     public void onActivityResult(int requestCode, int resultCode, Intent data)
     {
         super.onActivityResult(requestCode,resultCode,data);
@@ -83,7 +82,17 @@ public class MainActivity extends ListActivity
             if(resultCode == RESULT_OK)
             {
                 Bundle b = data.getExtras();
-                item = b.getParcelable("cs4330.cs.utep.edu");
+                item = b.getParcelable("result");
+
+                updateData(item.getId(),item.getName(),item.getPrice(),
+                        item.getNewPrice(),item.getPercent(),item.getUrl());//Attempts to update the database
+
+                label = item.getName() + " $" +String.format("%.2f",item.getNewPrice());
+                itemStorage.remove(selectedItem);//remove current item from storage
+                itemStorage.add(selectedItem,item);//Stores the item and its label.
+                list.remove(selectedItem);//remove current item from list
+                list.add(selectedItem,label);//Updates the list of items.
+                adapter.notifyDataSetChanged();//updates the apps display list
             }
         }
     }
@@ -93,7 +102,7 @@ public class MainActivity extends ListActivity
     {
         AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo)menuInfo;//information on the context menu created
         selectedItem = info.position;
-        itemName = (String)list.get(info.position);
+        itemName = list.get(info.position);
         menu.setHeaderTitle(itemName);
         createMenu(menu);
     }
@@ -162,7 +171,7 @@ public class MainActivity extends ListActivity
         //creates button to save the changes made
         builder.setPositiveButton("save", (dialog, id) ->
         {
-            String label;//label for the item
+
             String newName = name.getText().toString();//Gets the user input for the name
             String newURL = url.getText().toString();//Gets the user input for the url
             Item oldItem = itemStorage.get(selectedItem);//current item
@@ -189,7 +198,7 @@ public class MainActivity extends ListActivity
                 item.setId(oldItem.getId());
             }
 
-            updateData(item.getId(),item.getName(),item.getPrice(),item.getUrl());//Attempts to update the database
+            updateData(item.getId(),item.getName(),item.getPrice(),item.getNewPrice(),item.getPercent(),item.getUrl());//Attempts to update the database
             //Label to display the item to user
             label = item.getName() + " $" +String.format("%.2f",item.getPrice());
 
@@ -206,6 +215,8 @@ public class MainActivity extends ListActivity
     }
     public void addItemDialog()
     {
+        action = shared.getAction();
+        type = shared.getType();
         LayoutInflater inflater = LayoutInflater.from(getListView().getContext());//Gets a layout to use in the dialog
         AlertDialog.Builder builder = new AlertDialog.Builder(getListView().getContext());//Creates a builder to  build the dialog
         View customView = inflater.inflate(R.layout.add_item, null);//puts the layout in a view
@@ -213,6 +224,15 @@ public class MainActivity extends ListActivity
         builder.setView(customView);//sets the view to be seen by user
         EditText name = customView.findViewById(R.id.newIN);//Gets the input area for the name
         EditText url = customView.findViewById(R.id.newURL);//Gets the input area for the url
+        TextView urlText = customView.findViewById(R.id.newURL);//text set for the url
+        if(Intent.ACTION_SEND.equals(action)&& type != null) {
+            if ("text/plain".equals(type)) {
+                String sharedUrl = shared.getStringExtra(Intent.EXTRA_TEXT);
+                if (sharedUrl != null)
+                    urlText.setText(sharedUrl);
+            }
+        }
+
         //creates button to save the changes made
         builder.setPositiveButton("save", (dialog, id) ->
         {
@@ -227,23 +247,57 @@ public class MainActivity extends ListActivity
 
             newI.setId(itemId);//sets the items id
 
-            //Label to display the item to user and servers as a key in the hashmap.
-            String label = newI.getName() + " $" +String.format("%.2f",newI.getPrice());
-            itemStorage.add(newI); //Stores the item and its label.
+            //Label to display the item to user
+            label = newI.getName() + " $" +String.format("%.2f",newI.getPrice());
+            itemStorage.add(newI); //Stores the item
             list.add(label);//Updates the list of items.
 
-            addData(newI.getId(),newI.getName(),newI.getPrice(),newI.getUrl());//Attempts to add data to the database
+            addData(newI.getId(),newI.getName(),newI.getPrice(),newI.getNewPrice(),newI.getPercent(),newI.getUrl());//Attempts to add data to the database
 
-            adapter.notifyDataSetChanged();//updates the apps display list
+            adapter.notifyDataSetChanged();//updates the apps displayed list
+            shared.setAction("");
+        });
+        builder.setNegativeButton("cancel", (dialog,id) ->  { dialog.cancel(); shared.setAction("");});//the cancel button
+        builder.create();//creates the dialog
+        builder.show();//displays the dialog to te user
+    }
+    public ArrayList<String> makeList(ArrayList<Item> itemStorage)
+    {
+        ArrayList<String> itemsList = new ArrayList<>();
+        for(Item i: itemStorage)//go through each item
+        {
+            //check if price has been updated and sets label to new price
+            if(i.getNewPrice() != null) {
+                itemsList.add(i.getName() + " $"
+                        + String.format("%.2f", i.getNewPrice()));
+            }
+            else//price hasn't been updated
+            {
+                itemsList.add(i.getName() + " $"
+                        + String.format("%.2f", i.getPrice()));
+            }
+        }
+        return itemsList;
+    }
+    public void askForWifi()
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getListView().getContext());//Creates a builder to  build the dialog
+        builder.setTitle("Wifi"); //sets dialog title
+        builder.setMessage("Wifi is disabled, click \"settings\" to enable it now"); //sets dialog title
+        builder.setPositiveButton("settings", (dialog, id) ->
+        {
+            startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
         });
         builder.setNegativeButton("cancel", (dialog,id) -> dialog.cancel());//the cancel button
         builder.create();//creates the dialog
         builder.show();//displays the dialog to te user
+
     }
-    public void addData(int id, String name, Double price, String url)
+    //================================================= data base methods =====================================================================
+    public void addData(int id, String name, Double iPrice,Double nPrice,Double percent, String url)
     {
         //Attempts to add the items data to a table in a database, and displays a message if successful or not.
-        boolean insert = db.addItemData(id,name,price,url);
+        boolean insert = db.addItemData(id,name,iPrice,nPrice,percent,url);
         if (insert)
             toast("data saved");
         else
@@ -259,22 +313,22 @@ public class MainActivity extends ListActivity
         }
         else
         {
-            while (cursor.moveToNext())
+            while (cursor.moveToNext())//sets all items values
             {
                 Item restore = new Item();
                 restore.setId(cursor.getInt(0));
                 restore.setName(cursor.getString(1));
                 restore.setPrice(cursor.getDouble(2));
-                restore.setUrl(cursor.getString(3));
-                String label = restore.getName() + " $"
-                        + String.format("%.2f", restore.getPrice());
+                restore.setNewPrice(cursor.getDouble(3));
+                restore.setPercent(cursor.getDouble(4));
+                restore.setUrl(cursor.getString(5));
                 itemArrayList.add(restore);
             }
         }
     }
-    public void updateData(int id, String name, Double price, String url)
+    public void updateData(int id, String name, Double iPrice,Double nPrice,Double percent, String url)
     {
-        boolean updated = db.updateData(id,name,price,url);
+        boolean updated = db.updateData(id,name,iPrice,nPrice,percent,url);
         if(updated)
             toast("item updated");
         else
@@ -284,34 +338,12 @@ public class MainActivity extends ListActivity
     {
        int deletedRows = db.deleteData(id);
         if(deletedRows > 0)
-            toast(id +": item deleted");
+            toast("item deleted");
         else
-            toast(id + ": item not deleted");
+            toast("item not deleted");
     }
-    public ArrayList<String> makeList(ArrayList<Item> itemStorage)
-    {
-        ArrayList<String> itemsList = new ArrayList<>();
-        for(Item i: itemStorage)
-        {
-           itemsList.add(i.getName() + " $"
-                   + String.format("%.2f", i.getPrice()));
-        }
-        return itemsList;
-    }
-    public void askForWifi()
-    {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getListView().getContext());//Creates a builder to  build the dialog
-        builder.setTitle("Wifi"); //sets dialog title
-        builder.setMessage("Wifi is disabled, Enable wifi to continue"); //sets dialog title
-        builder.setPositiveButton("settings", (dialog, id) ->
-        {
-            startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
-        });
-        builder.setNegativeButton("cancel", (dialog,id) -> dialog.cancel());//the cancel button
-        builder.create();//creates the dialog
-        builder.show();//displays the dialog to te user
 
-    }
+
     private void toast(String msg)
     {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
